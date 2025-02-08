@@ -80,7 +80,6 @@ while True:
     ret, frame1 = cap.read()
     ret, frame2 = cap2.read()
     ret, frame3 = cap3.read()
-    #frame3 = frame3[50:230, 0:120]
 
     # Si no se ha capturado correctamente, continuar con el siguiente ciclo
     if not ret:
