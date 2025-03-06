@@ -8,15 +8,15 @@ model = YOLO("model_navico_trained.pt").to("cpu")
 
 # debug: uncomment for prod
 # Iniciar la captura de video (cámara por defecto)
-# cap = cv2.VideoCapture(2, cv2.CAP_DSHOW)
-# cap2 = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-# cap3 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+cap = cv2.VideoCapture(2, cv2.CAP_DSHOW)
+cap2 = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+cap3 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 
 # debug: uncomment for prod
 # Verificar si la cámara está abierta correctamente
-# if not cap.isOpened():
-#     print("No se puede acceder a la cámara.")
-#     exit()
+if not cap.isOpened():
+	print("No se puede acceder a la cámara.")
+	exit()
 
 pts1 = [
 			((250, 110), (500, 440), 'box_xl'),
@@ -36,37 +36,37 @@ pts3 = [
 
 
 ##################### DEBUG FUNCTIONS: NOT FOR PROD #####################
-def switchPassPts2(state):
-	global pts2
-	if state:
-		pts2 = [
-			((200, 100), (360, 200), 'medium_box'),
-			((180, 50), (370, 120), 'envelope_xl'),
-		]
-	else:
-		pts2 = [
-			((200, 100), (360, 200), 'medium_box'),
-			((180, 50), (370, 120), 'envelope_xl'),
-			((300, 280), (340, 390), 'envelope_m'),
-		]
+# def switchPassPts2(state):
+# 	global pts2
+# 	if state:
+# 		pts2 = [
+# 			((200, 100), (360, 200), 'medium_box'),
+# 			((180, 50), (370, 120), 'envelope_xl'),
+# 		]
+# 	else:
+# 		pts2 = [
+# 			((200, 100), (360, 200), 'medium_box'),
+# 			((180, 50), (370, 120), 'envelope_xl'),
+# 			((300, 280), (340, 390), 'envelope_m'),
+# 		]
 
-# switchPassPts2(False)
+# # switchPassPts2(False)
 
-def switchPassPts3(state):
-	global pts3
-	if state:
-		pts3 = [
-			((50, 60), (140, 130), 'propeller'),
-		]
-	else:
-		pts3 = [ 
-			((150, 290), (360, 400), 'propeller')
-		]
+# def switchPassPts3(state):
+# 	global pts3
+# 	if state:
+# 		pts3 = [
+# 			((50, 60), (140, 130), 'propeller'),
+# 		]
+# 	else:
+# 		pts3 = [ 
+# 			((150, 290), (360, 400), 'propeller')
+# 		]
 
-# switchPassPts3(True)
+# # switchPassPts3(True)
 
-statePts2 = False
-statePts3 = False
+# statePts2 = False
+# statePts3 = False
 ##################### END OF DEBUG FUNCTIONS: NOT FOR PROD #####################
 
 def verifyObjectLocation(positions, object_centers, frame):
@@ -128,8 +128,8 @@ passed_pause_start = 0
 while True:
 
 	# debug: comment for prod
-	switchPassPts2(statePts2)
-	switchPassPts3(statePts3)
+	# switchPassPts2(statePts2)
+	# switchPassPts3(statePts3)
 
 	centers1 = []
 	centers2 = []
@@ -137,15 +137,15 @@ while True:
 
 	# debug: uncomment for prod
 	# Capturar un cuadro de la cámara
-	# ret, frame1 = cap.read()
-	# ret, frame2 = cap2.read()
-	# ret, frame3 = cap3.read()
+	ret, frame1 = cap.read()
+	ret, frame2 = cap2.read()
+	ret, frame3 = cap3.read()
 	
 	# debug: uncomment for prod
 	# # Si no se ha capturado correctamente, continuar con el siguiente ciclo
-	# if not ret:
-	#     print("Error al capturar la imagen.")
-	#     break
+	if not ret:
+		print("Error al capturar la imagen.")
+		break
 	
 	# debug: use images as input
 	frame1 = cv2.imread('img0.png')
