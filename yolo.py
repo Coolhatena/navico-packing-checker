@@ -1,6 +1,7 @@
 import torch
 import cv2
 from ultralytics import YOLO
+import time
 
 # Cargar el modelo YOLOv8
 model = YOLO("model_navico_trained.pt").to("cpu")
@@ -120,6 +121,9 @@ def drawListColor(pts, frame, color):
 
 
 is_first_two_passed = False
+is_all_passed = False
+
+passed_pause_start = 0
 
 while True:
 
@@ -178,10 +182,22 @@ while True:
 		state_1 = verifyObjectLocation(pts1, centers1, frame1)
 		state2 = verifyObjectLocation(pts2, centers2, frame2)
 		is_first_two_passed = state_1 and state2
-	else:
+	elif not is_all_passed:
 		drawListColor(pts1, frame1, (0, 204, 255))
 		drawListColor(pts2, frame2, (0, 204, 255))
-		verifyObjectLocation(pts3, centers3, frame3)
+		state3 = verifyObjectLocation(pts3, centers3, frame3)
+		if state3:
+			is_all_passed = True
+			passed_pause_start = time.time()
+
+	if is_all_passed:
+		if time.time() - passed_pause_start < 5:
+			drawListColor(pts1, frame1, (0, 255, 0))
+			drawListColor(pts2, frame2, (0, 255, 0))
+			drawListColor(pts3, frame3, (0, 255, 0))
+		else:
+			is_all_passed = False
+			is_first_two_passed = False
 
 
 	cv2.imshow('frame', frame1)
