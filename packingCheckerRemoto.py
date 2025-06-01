@@ -1,6 +1,39 @@
 import torch
 import cv2
 from ultralytics import YOLO
+import socket
+
+
+# PROD: 169.254.114.75 # DEBUG: Set this for prod
+# TEST: 192.168.1.130
+# TEC: 140.10.3.2
+def start_server(host='169.254.114.75', port=4455):
+	EOF = "EOF"
+	
+	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+	server_socket.bind((host, port))
+	server_socket.listen(1)
+	print(f'Servidor escuchando en {host}:{port}')
+	
+
+	while True:
+		client_socket, client_address = server_socket.accept()
+		print(f'Conexión aceptada de {client_address}')
+		while True:
+			data = client_socket.recv(1024).decode('utf-8')
+			if data:
+				print(f'Mensaje recibido: {data}')
+				received_string = data.strip().lower() 
+				splitted_data = received_string.split(",")
+			
+			else:
+				print('No se recibió ningún dato.')
+
+			data = None		
+			client_socket.close()
+			print(f'Conexión cerrada con {client_address}')
+
 
 # Cargar el modelo YOLOv8
 model = YOLO("yolov8_custom.pt").to("cpu")
