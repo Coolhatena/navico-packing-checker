@@ -65,6 +65,7 @@ pts3 = [
             ((150, 290), (360, 400), 'propeller')
         ]
 
+
 def verifyObjectLocation(positions, object_centers, frame):
     elements = []
 
@@ -101,6 +102,39 @@ def drawList(elements, frame):
         pts2[1] += 50
 
 
+def getPredictions():
+	# Realizar la predicción con YOLOv8
+	results1 = model.predict(frame1, conf=0.5)
+	results2 = model.predict(frame2, conf=0.1)
+	results3 = model.predict(frame3, conf=0.5)
+
+	results_list = [
+					{'results': results1, 'frame': frame1, 'centers': centers1}, 
+					{'results': results2, 'frame': frame2, 'centers': centers2}, 
+					{'results': results3, 'frame': frame3, 'centers': centers3}
+				]
+	for results in results_list:
+		for result in results['results']:
+			for det in result.boxes:
+				classname = result.names[int(det.cls)]
+				x1, y1, x2, y2 = det.xyxy.int().tolist()[0]
+				center_point = (x1 + (x2-x1)//2, y1 + (y2-y1)//2)
+				results['centers'].append({'center':center_point, 'classname':classname})
+				cv2.circle(results['frame'], center_point, 5, (0, 255, 0), -1)
+
+	
+
+	# Dibujar las cajas delimitadoras en la imagen
+	#frame_with_boxes1 = results1[0].plot()  # La función plot dibuja las cajas de detección sobre la imagen
+	#frame_with_boxes2 = results2[0].plot()
+	#frame_with_boxes3 = results3[0].plot() 
+	verifyObjectLocation(pts1, centers1, frame1)
+	cv2.imshow('frame', frame1)
+	verifyObjectLocation(pts2, centers2, frame2)
+	cv2.imshow('frame2', frame2)
+	verifyObjectLocation(pts3, centers3, frame3)
+	cv2.imshow('frame3', frame3)
+
 
 if __name__ == '__main__':
 	server_thread = threading.Thread(target=start_server)
@@ -122,42 +156,10 @@ if __name__ == '__main__':
 		# 	print("Error al capturar la imagen.")
 		# 	break
 
+		# Use images as frames for development
 		frame1 = cv2.imread('./img0.png')
 		frame2 = cv2.imread('./img0_env.png')
 		frame3 = cv2.imread('./img0_prop.png')
-		
-
-		# Realizar la predicción con YOLOv8
-		results1 = model.predict(frame1, conf=0.5)
-		results2 = model.predict(frame2, conf=0.1)
-		results3 = model.predict(frame3, conf=0.5)
-
-		results_list = [
-						{'results': results1, 'frame': frame1, 'centers': centers1}, 
-						{'results': results2, 'frame': frame2, 'centers': centers2}, 
-						{'results': results3, 'frame': frame3, 'centers': centers3}
-					]
-		for results in results_list:
-			for result in results['results']:
-				for det in result.boxes:
-					classname = result.names[int(det.cls)]
-					x1, y1, x2, y2 = det.xyxy.int().tolist()[0]
-					center_point = (x1 + (x2-x1)//2, y1 + (y2-y1)//2)
-					results['centers'].append({'center':center_point, 'classname':classname})
-					cv2.circle(results['frame'], center_point, 5, (0, 255, 0), -1)
-
-		
-
-		# Dibujar las cajas delimitadoras en la imagen
-		#frame_with_boxes1 = results1[0].plot()  # La función plot dibuja las cajas de detección sobre la imagen
-		#frame_with_boxes2 = results2[0].plot()
-		#frame_with_boxes3 = results3[0].plot() 
-		verifyObjectLocation(pts1, centers1, frame1)
-		cv2.imshow('frame', frame1)
-		verifyObjectLocation(pts2, centers2, frame2)
-		cv2.imshow('frame2', frame2)
-		verifyObjectLocation(pts3, centers3, frame3)
-		cv2.imshow('frame3', frame3)
 
 		# Salir del bucle si se presiona la tecla 'q'
 		if cv2.waitKey(1) & 0xFF == ord('q'):
