@@ -13,68 +13,6 @@ def loadConfig():
 	print(configData)
 	return configData
 
-# PROD: xxx.xxx.xxx.xxx # DEBUG: Set this for prod
-# TEST: 192.168.1.94
-def start_server(host, port=4455):
-	EOF = "EOF"
-	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-	server_socket.bind((host, port))
-	server_socket.listen(1)
-	print(f'Servidor escuchando en {host}:{port}')
-
-	while True:
-		data = None
-		client_socket, client_address = server_socket.accept()
-		print(f'Conexión aceptada de {client_address}')
-		while True:
-			data = client_socket.recv(1024).decode('utf-8')
-			if data:
-				print(f'Mensaje recibido: {data}')
-				received_string = data.strip().lower() 
-				splitted_data = received_string.split(",")
-				model, *ids = splitted_data
-				if model and len(ids) > 0:
-					print(f'Model: {model}')
-					print(f'IDs: {ids}')
-			else:
-				print('No se recibió ningún dato.')
-
-			client_socket.close()
-			print(f'Conexión cerrada con {client_address}')
-			break
-
-
-# Cargar el modelo YOLOv8
-model = YOLO("yolov8_custom.pt").to("cpu")
-
-# Iniciar la captura de video (cámara por defecto)
-# cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-# cap2 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-# cap3 = cv2.VideoCapture(2, cv2.CAP_DSHOW)
-
-# Verificar si la cámara está abierta correctamente
-# if not cap.isOpened():
-#     print("No se puede acceder a la cámara.")
-#     exit()
-
-pts1 = [
-            ((250, 110), (500, 440), 'box_xl'),
-            ((5, 360), (100, 440), 'small_box'),
-        ]
-
-pts2 = [
-            ((200, 100), (360, 200), 'medium_box'),
-            ((180, 50), (370, 120), 'envelope_xl'),
-            ((300, 280), (340, 390), 'envelope_m'),
-            ((250, 280), (290, 390), 'envelope_s')
-        ]
-
-pts3 = [
-            ((50, 60), (140, 130), 'small_box'), 
-            ((150, 290), (360, 400), 'propeller')
-        ]
-
 
 def verifyObjectLocation(positions, object_centers, frame):
     elements = []
@@ -140,6 +78,86 @@ def getPredictions():
 	verifyObjectLocation(pts3, centers3, frame3)
 	cv2.imshow('frame3', frame3)
 
+
+def detectInROI(model, ids):
+	global configData
+
+	response = f'El modelo {model} no existe en el archivo de configuracion'
+	if model in configData['models']:
+		modelData = configData['models'][model]
+		response = f'{model},'
+		for id in ids:
+			if id in modelData:
+				response += '1,'
+			else:
+				response += '2,'
+		
+	return response
+
+
+# PROD: xxx.xxx.xxx.xxx # DEBUG: Set this for prod
+# TEST: 192.168.1.94
+def start_server(host, port=4455):
+	EOF = "EOF"
+	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+	server_socket.bind((host, port))
+	server_socket.listen(1)
+	print(f'Servidor escuchando en {host}:{port}')
+
+	while True:
+		data = None
+		client_socket, client_address = server_socket.accept()
+		print(f'Conexión aceptada de {client_address}')
+		while True:
+			data = client_socket.recv(1024).decode('utf-8')
+			if data:
+				print(f'Mensaje recibido: {data}')
+				received_string = data.strip().lower() 
+				splitted_data = received_string.split(",")
+				model, *ids = splitted_data
+				if model and len(ids) > 0:
+					print(f'Model: {model}')
+					print(f'IDs: {ids}')
+					response = detectInROI(model, ids)
+					client_socket.send(response.encode('utf-8'))
+			else:
+				print('No se recibió ningún dato.')
+
+			client_socket.close()
+			print(f'Conexión cerrada con {client_address}')
+			break
+
+
+# Cargar el modelo YOLOv8
+model = YOLO("yolov8_custom.pt").to("cpu")
+
+# Iniciar la captura de video (cámara por defecto)
+# cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+# cap2 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+# cap3 = cv2.VideoCapture(2, cv2.CAP_DSHOW)
+
+# Verificar si la cámara está abierta correctamente
+# if not cap.isOpened():
+#     print("No se puede acceder a la cámara.")
+#     exit()
+
+pts1 = [
+            ((250, 110), (500, 440), 'box_xl'),
+            ((5, 360), (100, 440), 'small_box'),
+        ]
+
+pts2 = [
+            ((200, 100), (360, 200), 'medium_box'),
+            ((180, 50), (370, 120), 'envelope_xl'),
+            ((300, 280), (340, 390), 'envelope_m'),
+            ((250, 280), (290, 390), 'envelope_s')
+        ]
+
+pts3 = [
+            ((50, 60), (140, 130), 'small_box'), 
+            ((150, 290), (360, 400), 'propeller')
+        ]
 
 if __name__ == '__main__':
 	global frame1, frame2, frame3, configData 
