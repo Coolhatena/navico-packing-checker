@@ -152,18 +152,16 @@ def start_server(host, port=4455):
 			break
 
 
-# Cargar el modelo YOLOv8
+# Load Yolov8 model
 model = YOLO("yolov8_custom.pt").to("cpu")
 
-# Iniciar la captura de video (cámara por defecto)
-# cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-# cap2 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-# cap3 = cv2.VideoCapture(2, cv2.CAP_DSHOW)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+cap2 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+cap3 = cv2.VideoCapture(2, cv2.CAP_DSHOW)
 
-# Verificar si la cámara está abierta correctamente
-# if not cap.isOpened():
-#     print("No se puede acceder a la cámara.")
-#     exit()
+if not cap.isOpened():
+    print("No se puede acceder a la cámara.")
+    exit()
 
 if __name__ == '__main__':
 	global frame1, frame2, frame3, configData, frame_rects
@@ -175,19 +173,19 @@ if __name__ == '__main__':
 
 	while True:
 		# Capturar un cuadro de la cámara
-		# ret, frame1 = cap.read()
-		# ret, frame2 = cap2.read()
-		# ret, frame3 = cap3.read()
+		ret1, frame1 = cap.read()
+		ret2, frame2 = cap2.read()
+		ret3, frame3 = cap3.read()
 
 		# # Si no se ha capturado correctamente, continuar con el siguiente ciclo
-		# if not ret:
-		# 	print("Error al capturar la imagen.")
-		# 	break
+		if not ret1 or not ret2 or not ret3:
+			print("Error al capturar la imagen.")
+			break
 
 		# Use images as frames for development
-		frame1 = cv2.imread('./img0.png')
-		frame2 = cv2.imread('./img0_env.png')
-		frame3 = cv2.imread('./img0_prop.png')
+		# frame1 = cv2.imread('./img0.png')
+		# frame2 = cv2.imread('./img0_env.png')
+		# frame3 = cv2.imread('./img0_prop.png')
 
 		frames = [frame1, frame2, frame3]
 		for index, frame_data in enumerate(frame_rects):
@@ -204,5 +202,7 @@ if __name__ == '__main__':
 			break
 
 	# Liberar la captura y cerrar las ventanas
-	# cap.release()
+	cap.release()
+	cap2.release()
+	cap3.release()
 	cv2.destroyAllWindows()
