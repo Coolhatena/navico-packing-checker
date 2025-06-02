@@ -62,6 +62,9 @@ def getPredictions():
 					{'results': results2, 'frame': frame2, 'centers': centers2}, 
 					{'results': results3, 'frame': frame3, 'centers': centers3}
 				]
+
+
+def validatePredictions(results_list):
 	for results in results_list:
 		for result in results['results']:
 			for det in result.boxes:
@@ -79,7 +82,7 @@ def getPredictions():
 	cv2.imshow('frame3', frame3)
 
 
-def detectInROI(model, ids):
+def detectForPackingModel(model, ids):
 	global configData
 
 	response = f'El modelo {model} no existe en el archivo de configuracion'
@@ -119,7 +122,7 @@ def start_server(host, port=4455):
 				if model and len(ids) > 0:
 					print(f'Model: {model}')
 					print(f'IDs: {ids}')
-					response = detectInROI(model, ids)
+					response = detectForPackingModel(model, ids)
 					client_socket.send(response.encode('utf-8'))
 			else:
 				print('No se recibió ningún dato.')
