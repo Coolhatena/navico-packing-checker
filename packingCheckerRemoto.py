@@ -1,13 +1,13 @@
 import torch
+import threading
 import cv2
 from ultralytics import YOLO
 import socket
 
 
-# PROD: 169.254.114.75 # DEBUG: Set this for prod
-# TEST: 192.168.1.130
-# TEC: 140.10.3.2
-def start_server(host='169.254.114.75', port=4455):
+# PROD: xxx.xxx.xxx.xxx # DEBUG: Set this for prod
+# TEST: 192.168.1.94
+def start_server(host='192.168.1.94', port=4455):
 	EOF = "EOF"
 	
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -39,14 +39,14 @@ def start_server(host='169.254.114.75', port=4455):
 model = YOLO("yolov8_custom.pt").to("cpu")
 
 # Iniciar la captura de video (cámara por defecto)
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-cap2 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-cap3 = cv2.VideoCapture(2, cv2.CAP_DSHOW)
+# cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+# cap2 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+# cap3 = cv2.VideoCapture(2, cv2.CAP_DSHOW)
 
 # Verificar si la cámara está abierta correctamente
-if not cap.isOpened():
-    print("No se puede acceder a la cámara.")
-    exit()
+# if not cap.isOpened():
+#     print("No se puede acceder a la cámara.")
+#     exit()
 
 pts1 = [
             ((250, 110), (500, 440), 'box_xl'),
@@ -102,59 +102,67 @@ def drawList(elements, frame):
 
 
 
+if __name__ == '__main__':
+	server_thread = threading.Thread(target=start_server)
+	server_thread.daemon = True
+	server_thread.start()
 
+	while True:
+		centers1 = []
+		centers2 = []
+		centers3 = []
 
-while True:
-    centers1 = []
-    centers2 = []
-    centers3 = []
+		# Capturar un cuadro de la cámara
+		# ret, frame1 = cap.read()
+		# ret, frame2 = cap2.read()
+		# ret, frame3 = cap3.read()
 
-    # Capturar un cuadro de la cámara
-    ret, frame1 = cap.read()
-    ret, frame2 = cap2.read()
-    ret, frame3 = cap3.read()
+		# # Si no se ha capturado correctamente, continuar con el siguiente ciclo
+		# if not ret:
+		# 	print("Error al capturar la imagen.")
+		# 	break
 
-    # Si no se ha capturado correctamente, continuar con el siguiente ciclo
-    if not ret:
-        print("Error al capturar la imagen.")
-        break
+		frame1 = cv2.imread('./img0.png')
+		frame2 = cv2.imread('./img0_env.png')
+		frame3 = cv2.imread('./img0_prop.png')
+		
 
-    # Realizar la predicción con YOLOv8
-    results1 = model.predict(frame1, conf=0.5)
-    results2 = model.predict(frame2, conf=0.1)
-    results3 = model.predict(frame3, conf=0.5)
+		# Realizar la predicción con YOLOv8
+		results1 = model.predict(frame1, conf=0.5)
+		results2 = model.predict(frame2, conf=0.1)
+		results3 = model.predict(frame3, conf=0.5)
 
-    results_list = [
-                    {'results': results1, 'frame': frame1, 'centers': centers1}, 
-                    {'results': results2, 'frame': frame2, 'centers': centers2}, 
-                    {'results': results3, 'frame': frame3, 'centers': centers3}
-                ]
-    for results in results_list:
-        for result in results['results']:
-            for det in result.boxes:
-                classname = result.names[int(det.cls)]
-                x1, y1, x2, y2 = det.xyxy.int().tolist()[0]
-                center_point = (x1 + (x2-x1)//2, y1 + (y2-y1)//2)
-                results['centers'].append({'center':center_point, 'classname':classname})
-                cv2.circle(results['frame'], center_point, 5, (0, 255, 0), -1)
+		results_list = [
+						{'results': results1, 'frame': frame1, 'centers': centers1}, 
+						{'results': results2, 'frame': frame2, 'centers': centers2}, 
+						{'results': results3, 'frame': frame3, 'centers': centers3}
+					]
+		for results in results_list:
+			for result in results['results']:
+				for det in result.boxes:
+					classname = result.names[int(det.cls)]
+					x1, y1, x2, y2 = det.xyxy.int().tolist()[0]
+					center_point = (x1 + (x2-x1)//2, y1 + (y2-y1)//2)
+					results['centers'].append({'center':center_point, 'classname':classname})
+					cv2.circle(results['frame'], center_point, 5, (0, 255, 0), -1)
 
-    
+		
 
-    # Dibujar las cajas delimitadoras en la imagen
-    #frame_with_boxes1 = results1[0].plot()  # La función plot dibuja las cajas de detección sobre la imagen
-    #frame_with_boxes2 = results2[0].plot()
-    #frame_with_boxes3 = results3[0].plot() 
-    verifyObjectLocation(pts1, centers1, frame1)
-    cv2.imshow('frame', frame1)
-    verifyObjectLocation(pts2, centers2, frame2)
-    cv2.imshow('frame2', frame2)
-    verifyObjectLocation(pts3, centers3, frame3)
-    cv2.imshow('frame3', frame3)
+		# Dibujar las cajas delimitadoras en la imagen
+		#frame_with_boxes1 = results1[0].plot()  # La función plot dibuja las cajas de detección sobre la imagen
+		#frame_with_boxes2 = results2[0].plot()
+		#frame_with_boxes3 = results3[0].plot() 
+		verifyObjectLocation(pts1, centers1, frame1)
+		cv2.imshow('frame', frame1)
+		verifyObjectLocation(pts2, centers2, frame2)
+		cv2.imshow('frame2', frame2)
+		verifyObjectLocation(pts3, centers3, frame3)
+		cv2.imshow('frame3', frame3)
 
-    # Salir del bucle si se presiona la tecla 'q'
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+		# Salir del bucle si se presiona la tecla 'q'
+		if cv2.waitKey(1) & 0xFF == ord('q'):
+			break
 
-# Liberar la captura y cerrar las ventanas
-cap.release()
-cv2.destroyAllWindows()
+	# Liberar la captura y cerrar las ventanas
+	# cap.release()
+	cv2.destroyAllWindows()
