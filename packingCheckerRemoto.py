@@ -1,23 +1,30 @@
-import torch
+import json
 import threading
 import cv2
 from ultralytics import YOLO
 import socket
 
 
+def loadConfig():
+	with open('config.json', 'r') as configFile:
+		configData = json.load(configFile)
+
+	print("Configuración: ")
+	print(configData)
+	return configData
+
 # PROD: xxx.xxx.xxx.xxx # DEBUG: Set this for prod
 # TEST: 192.168.1.94
-def start_server(host='192.168.1.94', port=4455):
+def start_server(host, port=4455):
 	EOF = "EOF"
-	
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	server_socket.bind((host, port))
 	server_socket.listen(1)
 	print(f'Servidor escuchando en {host}:{port}')
-	
 
 	while True:
+		data = None
 		client_socket, client_address = server_socket.accept()
 		print(f'Conexión aceptada de {client_address}')
 		while True:
@@ -26,13 +33,16 @@ def start_server(host='192.168.1.94', port=4455):
 				print(f'Mensaje recibido: {data}')
 				received_string = data.strip().lower() 
 				splitted_data = received_string.split(",")
-			
+				model, *ids = splitted_data
+				if model and len(ids) > 0:
+					print(f'Model: {model}')
+					print(f'IDs: {ids}')
 			else:
 				print('No se recibió ningún dato.')
 
-			data = None		
 			client_socket.close()
 			print(f'Conexión cerrada con {client_address}')
+			break
 
 
 # Cargar el modelo YOLOv8
@@ -103,6 +113,7 @@ def drawList(elements, frame):
 
 
 def getPredictions():
+	global frame1, frame2, frame3 
 	# Realizar la predicción con YOLOv8
 	results1 = model.predict(frame1, conf=0.5)
 	results2 = model.predict(frame2, conf=0.1)
@@ -122,12 +133,6 @@ def getPredictions():
 				results['centers'].append({'center':center_point, 'classname':classname})
 				cv2.circle(results['frame'], center_point, 5, (0, 255, 0), -1)
 
-	
-
-	# Dibujar las cajas delimitadoras en la imagen
-	#frame_with_boxes1 = results1[0].plot()  # La función plot dibuja las cajas de detección sobre la imagen
-	#frame_with_boxes2 = results2[0].plot()
-	#frame_with_boxes3 = results3[0].plot() 
 	verifyObjectLocation(pts1, centers1, frame1)
 	cv2.imshow('frame', frame1)
 	verifyObjectLocation(pts2, centers2, frame2)
@@ -137,7 +142,9 @@ def getPredictions():
 
 
 if __name__ == '__main__':
-	server_thread = threading.Thread(target=start_server)
+	global frame1, frame2, frame3, configData 
+	configData = loadConfig()
+	server_thread = threading.Thread(target= lambda: start_server(host=configData['connection']['ip']))
 	server_thread.daemon = True
 	server_thread.start()
 
