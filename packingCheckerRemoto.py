@@ -14,45 +14,64 @@ def loadConfig():
 	return configData
 
 
-def verifyObjectLocation(positions, object_centers, frame):
-    elements = []
+def verifyObjectLocation(pt, object_centers, frame_index):
+	global frame_rects
 
-    for pt in positions:
-        rectColor = (0, 0, 255)
-        classname = pt[2]
-        is_all_test_passed = False
-        for center in object_centers:
-            x, y = center['center']
-            is_correct_class = center['classname'] == classname
-            if pt[2] in ['envelope_m', 'envelope_s']:
-                 is_correct_class = center['classname'] in ['envelope_m', 'envelope_s']
-            is_in_range_x = pt[0][0] < x < pt[1][0]
-            is_in_range_y = pt[0][1] < y < pt[1][1]
-            is_all_test_passed = is_in_range_x and is_in_range_y and is_correct_class
-            if is_all_test_passed:
-                rectColor = (0, 255, 0)
-                break
-        
-        elements.append({'classname': classname, 'state':is_all_test_passed})
-        cv2.rectangle(frame, pt[0], pt[1], rectColor, 2)
-    print(elements)
-    drawList(elements, frame)
+	rect_color = (0, 0, 255)
+	classname = pt[2]
+	is_all_test_passed = False
+	for center in object_centers:
+		x, y = center['center']
+		is_correct_class = center['classname'] == classname
+		if pt[2] in ['envelope_m', 'envelope_s']:
+				is_correct_class = center['classname'] in ['envelope_m', 'envelope_s']
+		is_in_range_x = pt[0][0] < x < pt[1][0]
+		is_in_range_y = pt[0][1] < y < pt[1][1]
+		is_all_test_passed = is_in_range_x and is_in_range_y and is_correct_class
+		if is_all_test_passed:
+			rect_color = (0, 255, 0)
+			break
+	
+	frame_rects[frame_index].append((pt[0], pt[1], rect_color))
+	return is_all_test_passed
 
 
 def drawList(elements, frame):
-    pts1 = [500, 50]
-    pts2 = [630, 80]
-    for element in elements:
-        color = (0, 255, 0) if element['state'] else (255, 255, 255)
-        cv2.rectangle(frame, pts1, pts2, color, -1)
-        cv2.putText(frame, element['classname'], (pts1[0] + 5, pts1[1]+20), cv2.FONT_HERSHEY_SIMPLEX, .6, (0, 0, 0), 1)
-        pts1[1] += 50
-        pts2[1] += 50
+	pts1 = [500, 50]
+	pts2 = [630, 80]
+	for element in elements:
+		color = (0, 255, 0) if element['state'] else (255, 255, 255)
+		cv2.rectangle(frame, pts1, pts2, color, -1)
+		cv2.putText(frame, element['classname'], (pts1[0] + 5, pts1[1]+20), cv2.FONT_HERSHEY_SIMPLEX, .6, (0, 0, 0), 1)
+		pts1[1] += 50
+		pts2[1] += 50
+
+
+def getIdData(id):
+	global configData
+	
+	roiData = configData['ROI']
+	if id in roiData["center_cam"]:
+		# print(f'ID {id}: center_cam')
+		return (0, roiData["center_cam"][id])
+	if id in roiData["right_cam"]:
+		# print(f'ID {id}: right_cam')
+		return (1, roiData["right_cam"][id])
+	if id in roiData["left_cam"]:
+		# print(f'ID {id}: left_cam')
+		return (2, roiData["left_cam"][id])
+	
+	print(f'ID {id}: not found in any ROI config')
+	return (-1, [])
 
 
 def getPredictions():
 	global frame1, frame2, frame3 
-	# Realizar la predicción con YOLOv8
+
+	centers1 = []
+	centers2 = []
+	centers3 = []
+	# Predict using yolov8
 	results1 = model.predict(frame1, conf=0.5)
 	results2 = model.predict(frame2, conf=0.1)
 	results3 = model.predict(frame3, conf=0.5)
@@ -62,9 +81,7 @@ def getPredictions():
 					{'results': results2, 'frame': frame2, 'centers': centers2}, 
 					{'results': results3, 'frame': frame3, 'centers': centers3}
 				]
-
-
-def validatePredictions(results_list):
+	
 	for results in results_list:
 		for result in results['results']:
 			for det in result.boxes:
@@ -74,28 +91,31 @@ def validatePredictions(results_list):
 				results['centers'].append({'center':center_point, 'classname':classname})
 				cv2.circle(results['frame'], center_point, 5, (0, 255, 0), -1)
 
-	verifyObjectLocation(pts1, centers1, frame1)
-	cv2.imshow('frame', frame1)
-	verifyObjectLocation(pts2, centers2, frame2)
-	cv2.imshow('frame2', frame2)
-	verifyObjectLocation(pts3, centers3, frame3)
-	cv2.imshow('frame3', frame3)
+	return results_list
 
 
 def detectForPackingModel(model, ids):
-	global configData
+	global configData, frame_rects
 
+	frame_rects = [[], [], []]
 	response = f'El modelo {model} no existe en el archivo de configuracion'
 	if model in configData['models']:
-		modelData = configData['models'][model]
+		predictions = getPredictions()
+		model_data = configData['models'][model]
 		response = f'{model},'
 		for id in ids:
-			if id in modelData:
-				response += '1,'
+			frame_index, idData = getIdData(id)
+			print(id in model_data)
+			print(frame_index >= 0)
+			if (id in model_data) and frame_index >= 0:
+				if verifyObjectLocation(idData, predictions[frame_index]['centers'], frame_index):
+					response += '1,'
+				else:
+					response += '0,'
 			else:
 				response += '2,'
 		
-	return response
+	return response[:-1]
 
 
 # PROD: xxx.xxx.xxx.xxx # DEBUG: Set this for prod
@@ -145,35 +165,15 @@ model = YOLO("yolov8_custom.pt").to("cpu")
 #     print("No se puede acceder a la cámara.")
 #     exit()
 
-pts1 = [
-            ((250, 110), (500, 440), 'box_xl'),
-            ((5, 360), (100, 440), 'small_box'),
-        ]
-
-pts2 = [
-            ((200, 100), (360, 200), 'medium_box'),
-            ((180, 50), (370, 120), 'envelope_xl'),
-            ((300, 280), (340, 390), 'envelope_m'),
-            ((250, 280), (290, 390), 'envelope_s')
-        ]
-
-pts3 = [
-            ((50, 60), (140, 130), 'small_box'), 
-            ((150, 290), (360, 400), 'propeller')
-        ]
-
 if __name__ == '__main__':
-	global frame1, frame2, frame3, configData 
+	global frame1, frame2, frame3, configData, frame_rects
+	frame_rects = [[], [], []] # Array elements must be (pt1, pt2, color)
 	configData = loadConfig()
 	server_thread = threading.Thread(target= lambda: start_server(host=configData['connection']['ip']))
 	server_thread.daemon = True
 	server_thread.start()
 
 	while True:
-		centers1 = []
-		centers2 = []
-		centers3 = []
-
 		# Capturar un cuadro de la cámara
 		# ret, frame1 = cap.read()
 		# ret, frame2 = cap2.read()
@@ -188,6 +188,16 @@ if __name__ == '__main__':
 		frame1 = cv2.imread('./img0.png')
 		frame2 = cv2.imread('./img0_env.png')
 		frame3 = cv2.imread('./img0_prop.png')
+
+		frames = [frame1, frame2, frame3]
+		for index, frame_data in enumerate(frame_rects):
+			for rect in frame_data:
+				cv2.rectangle(frames[index], rect[0], rect[1], rect[2], 2)
+
+
+		cv2.imshow('frame', frame1)
+		cv2.imshow('frame2', frame2)
+		cv2.imshow('frame3', frame3)
 
 		# Salir del bucle si se presiona la tecla 'q'
 		if cv2.waitKey(1) & 0xFF == ord('q'):
