@@ -7,13 +7,9 @@ import os
 
 
 def loadConfig():
-<<<<<<< HEAD
 	script_dir = os.path.dirname(os.path.abspath(__file__))
 	config_path = os.path.join(script_dir, 'config.json')
 	with open(config_path, 'r') as configFile:
-=======
-	with open('config.json', 'r') as configFile:
->>>>>>> 69cd10449c128992f2e4dd0791ecab0101bb2be5
 		configData = json.load(configFile)
 
 	print("Configuración: ")
@@ -150,11 +146,7 @@ def start_server(host, port=4455):
 					print(f'Model: {model}')
 					print(f'IDs: {ids}')
 					response = detectForPackingModel(model, ids)
-<<<<<<< HEAD
 					client_socket.sendall(response.encode('utf-8'))
-=======
-					client_socket.send(response.encode('utf-8'))
->>>>>>> 69cd10449c128992f2e4dd0791ecab0101bb2be5
 			else:
 				print('No se recibió ningún dato.')
 
@@ -164,13 +156,9 @@ def start_server(host, port=4455):
 
 
 # Load Yolov8 model
-<<<<<<< HEAD
 script_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(script_dir, "yolov8_custom.pt")
 model = YOLO(model_path).to("cpu")
-=======
-model = YOLO("yolov8_custom.pt").to("cpu")
->>>>>>> 69cd10449c128992f2e4dd0791ecab0101bb2be5
 
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 cap2 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
