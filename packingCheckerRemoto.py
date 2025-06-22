@@ -139,7 +139,7 @@ def start_server(host, port=4455):
 			data = client_socket.recv(1024).decode('utf-8')
 			if data:
 				print(f'Mensaje recibido: {data}')
-				received_string = data.strip().lower() 
+				received_string = data.strip() 
 				splitted_data = received_string.split(",")
 				model, *ids = splitted_data
 				if model and len(ids) > 0:
