@@ -17,6 +17,20 @@ def loadConfig():
 	return configData
 
 
+def draw_label(frame, label, position=(10, 30)):
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.7
+    thickness = 2
+    text_size, _ = cv2.getTextSize(label, font, font_scale, thickness)
+
+    # Coordenadas del rectángulo blanco
+    x, y = position
+    w, h = text_size
+    cv2.rectangle(frame, (x - 5, y - h - 5), (x + w + 5, y + 5), (255, 255, 255), -1)
+    cv2.putText(frame, label, (x, y), font, font_scale, (0, 0, 0), thickness, cv2.LINE_AA)
+
+
+
 def verifyObjectLocation(pt, object_centers, frame_index):
 	global frame_rects
 
@@ -57,9 +71,11 @@ def getIdData(id):
 	if id in roiData["center_cam"]:
 		# print(f'ID {id}: center_cam')
 		return (0, roiData["center_cam"][id])
+	
 	if id in roiData["right_cam"]:
 		# print(f'ID {id}: right_cam')
 		return (1, roiData["right_cam"][id])
+	
 	if id in roiData["left_cam"]:
 		# print(f'ID {id}: left_cam')
 		return (2, roiData["left_cam"][id])
@@ -101,15 +117,15 @@ def detectForPackingModel(model, ids):
 	global configData, frame_rects
 
 	frame_rects = [[], [], []]
-	response = f'El modelo {model} no existe en el archivo de configuracion'
+	response = f'El modelo {model} no existe en el archivo de configuracion '
 	if model in configData['models']:
 		predictions = getPredictions()
 		model_data = configData['models'][model]
 		response = f'{model},'
 		for id in ids:
 			frame_index, idData = getIdData(id)
-			print(id in model_data)
-			print(frame_index >= 0)
+			# print(id in model_data)
+			# print(frame_index >= 0)
 			if (id in model_data) and frame_index >= 0:
 				if verifyObjectLocation(idData, predictions[frame_index]['centers'], frame_index):
 					response += '1,'
@@ -160,6 +176,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(script_dir, "yolov8_custom.pt")
 model = YOLO(model_path).to("cpu")
 
+# DEBUG comment this block
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 cap2 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 cap3 = cv2.VideoCapture(2, cv2.CAP_DSHOW)
@@ -178,25 +195,34 @@ if __name__ == '__main__':
 
 	while True:
 		# Capturar un cuadro de la cámara
-		ret1, frame1 = cap.read()
-		ret2, frame2 = cap2.read()
-		ret3, frame3 = cap3.read()
+		ret1, frame1_temp = cap.read()
+		ret2, frame2_temp = cap2.read()
+		ret3, frame3_temp = cap3.read()
 
-		# # Si no se ha capturado correctamente, continuar con el siguiente ciclo
+		# Si no se ha capturado correctamente, continuar con el siguiente ciclo
 		if not ret1 or not ret2 or not ret3:
 			print("Error al capturar la imagen.")
 			break
 
 		# Use images as frames for development
-		# frame1 = cv2.imread('./img0.png')
-		# frame2 = cv2.imread('./img0_env.png')
-		# frame3 = cv2.imread('./img0_prop.png')
+		# frame1_temp = cv2.imread('./img0.png')
+		# frame2_temp = cv2.imread('./img0_env.png')
+		# frame3_temp = cv2.imread('./img0_prop.png')
+
+		unordered_frames = [frame1_temp, frame2_temp, frame3_temp]
+
+		frame1 = unordered_frames[configData["cameras"]["center"]]
+		frame2 = unordered_frames[configData["cameras"]["right"]]
+		frame3 = unordered_frames[configData["cameras"]["left"]]
 
 		frames = [frame1, frame2, frame3]
 		for index, frame_data in enumerate(frame_rects):
 			for rect in frame_data:
 				cv2.rectangle(frames[index], rect[0], rect[1], rect[2], 2)
 
+		draw_label(frame1, "center")
+		draw_label(frame2, "right")
+		draw_label(frame3, "left")
 
 		cv2.imshow('frame', frame1)
 		cv2.imshow('frame2', frame2)
