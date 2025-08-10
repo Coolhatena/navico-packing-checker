@@ -176,7 +176,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(script_dir, "yolov8_custom.pt")
 model = YOLO(model_path).to("cpu")
 
-# DEBUG comment this block
+# DEBUG: uncomment this block
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 cap2 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 cap3 = cv2.VideoCapture(2, cv2.CAP_DSHOW)
@@ -194,6 +194,7 @@ if __name__ == '__main__':
 	server_thread.start()
 
 	while True:
+		# Debug: uncomment this section
 		# Capturar un cuadro de la cámara
 		ret1, frame1_temp = cap.read()
 		ret2, frame2_temp = cap2.read()
@@ -219,6 +220,8 @@ if __name__ == '__main__':
 		for index, frame_data in enumerate(frame_rects):
 			for rect in frame_data:
 				cv2.rectangle(frames[index], rect[0], rect[1], rect[2], 2)
+				cv2.circle(frames[index], rect[0], 3, (0, 165, 255), -1)
+				cv2.circle(frames[index], rect[1], 3, (238, 130, 238), -1)
 
 		draw_label(frame1, "center")
 		draw_label(frame2, "right")
